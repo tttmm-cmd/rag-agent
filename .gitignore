@@ -1,0 +1,16 @@
+# 密钥 —— 绝不提交
+.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 运行产物
+agent_memory/
+traces/
+
+# 语料与索引(本地重建:python index.py --corpus xxx)
+data/
+faiss_*.index
+faiss_*.json
