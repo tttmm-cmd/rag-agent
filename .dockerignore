@@ -1,0 +1,19 @@
+# 密钥绝不能进镜像(compose 用 env_file 注入)
+.env
+
+# 源码之外:git/测试/缓存/本地数据
+.git
+eval/
+tests/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache
+verify.sh
+
+# 运行期数据挂 volume,不进镜像
+agent_memory/
+traces/
+
+# 旧索引备份不需要
+*.bak_v3

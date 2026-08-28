@@ -1,11 +1,16 @@
-"""向量化:DashScope text-embedding-v3(OpenAI 兼容端点),密钥/模型可换"""
+"""向量化:DashScope qwen3.7-text-embedding(OpenAI 兼容端点),密钥/模型可换"""
 import os
+from functools import lru_cache
+
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()  # index.py 进程也要读 .env,必须在本模块加载
 
 EMBED_BASE_URL = os.getenv("EMBED_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "text-embedding-v3")
+EMBED_MODEL = os.getenv("EMBED_MODEL", "qwen3.7-text-embedding")
 EMBED_API_KEY = os.getenv("EMBED_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
-BATCH = 32
+BATCH = 10  # DashScope 兼容端点批量上限 10
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
@@ -26,5 +31,13 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     return all_emb
 
 
+@lru_cache(maxsize=128)
+def _embed_query_cached(text: str) -> tuple:
+    """query 向量缓存:agent 多轮里反复检索同一 query 时,省 DashScope 往返。
+    tuple 不可变,防调用方误改污染缓存;embed_query 返回时再转 list。
+    建索引走的 embed_texts(批量)不经过这里,不受缓存影响。"""
+    return tuple(embed_texts([text])[0])
+
+
 def embed_query(text: str) -> list[float]:
-    return embed_texts([text])[0]
+    return list(_embed_query_cached(text))

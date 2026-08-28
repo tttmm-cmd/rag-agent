@@ -4,7 +4,7 @@
 """
 import os
 from rag.vector_store import load_index
-from rag.retrieve import retrieve, rerank_lexical
+from rag.retrieve import retrieve, retrieve_hybrid
 
 
 class RAGStore:
@@ -21,9 +21,12 @@ class RAGStore:
         self.corpus = corpus
         print(f"✅ 语料 [{corpus}] 已加载: {self.index.ntotal} 条索引")
 
-    def search(self, query: str, top_k: int = 5, rerank: bool = True) -> list[dict]:
-        hits = retrieve(query, self.index, self.chunks, top_k=top_k)
-        return rerank_lexical(hits, query) if rerank else hits
+    def search(self, query: str, top_k: int = 5, rerank: bool = True,
+               bm25_query: str | None = None, project_filter=None) -> list[dict]:
+        if not rerank:
+            return retrieve(query, self.index, self.chunks, top_k=top_k)
+        return retrieve_hybrid(query, self.index, self.chunks, top_k=top_k,
+                               keyword_query=bm25_query, project_filter=project_filter)
 
 
 # 全局单例:index.py / app.py / 工具都读写它

@@ -60,8 +60,9 @@ class ContextCompactor:
             sys_msg = {"role": "system", "content": ""}
 
         # 2. 从后往前找最近 keep_recent_rounds 个 user 消息
+        #    默认保留全部;不足 keep_recent 个 user 消息时一律不压缩(否则会把原始问题也摘要掉)
         user_count = 0
-        recent_start_index = len(non_sys_msgs)  # 默认保留全部
+        recent_start_index = 0
         for i in range(len(non_sys_msgs) - 1, -1, -1):
             if non_sys_msgs[i]["role"] == "user":
                 user_count += 1

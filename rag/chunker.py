@@ -1,5 +1,6 @@
 """文本分块:段落优先合并,超长段落滑动窗口硬切,带 overlap 防切碎语义"""
 from rag.parse_document import ParsedBlock
+from rag.text_norm import normalize_text
 
 CHUNK_SIZE = 500  # 块目标字符数(中文约 250-300 token)
 OVERLAP = 50      # 相邻块重叠字符
@@ -8,7 +9,8 @@ OVERLAP = 50      # 相邻块重叠字符
 def split_into_chunks(blocks: list[ParsedBlock], size: int = CHUNK_SIZE, overlap: int = OVERLAP) -> list[dict]:
     chunks = []
     for b in blocks:
-        for text in _split_one(b.text, size, overlap):
+        # 入库前 NFKC 归一化:PDF 提取的康熙部首变体(机器⼈)统一成标准字符(机器人)
+        for text in _split_one(normalize_text(b.text), size, overlap):
             chunks.append({"source": b.source, "section": b.section, "text": text})
     return chunks
 

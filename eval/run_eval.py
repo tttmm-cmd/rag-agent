@@ -9,6 +9,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from rag.store import rag_store
+from rag.direct import _content_query
 from memory import create_memory_session
 from main import agent_loop
 from eval.evaluator import retrieval_recall, answer_accuracy
@@ -23,7 +24,8 @@ def main():
     args = ap.parse_args()
 
     rag_store.load(args.corpus)
-    recall = retrieval_recall(CASES, args.corpus)
+    # 与系统实际行为一致:剥掉项目名 + 定位项目内检索(_content_query 返回 (query, 项目))
+    recall = retrieval_recall(CASES, args.corpus, query_fn=_content_query)
     print(f"检索召回率: {recall:.0%}")
 
     if args.recall_only:

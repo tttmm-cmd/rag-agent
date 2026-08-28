@@ -14,3 +14,7 @@ traces/
 data/
 faiss_*.index
 faiss_*.json
+*.bak_v3
+
+# 评测运行产物(报告 report.md 会提交,logs/ 不提交)
+eval/logs/

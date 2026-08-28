@@ -74,18 +74,51 @@ def _corpus_error() -> str | None:
     return None if rag_store.index is not None else "❌ 语料未加载,请通过接口指定 corpus(如 ?corpus=zhizheng)"
 
 
-def tool_parse_document(file_name: str) -> str:
-    """解析 data/ 目录下文档(路径安全:强制限制在 data 内)"""
-    path = os.path.abspath(os.path.join(DATA_DIR, file_name))
-    if not path.startswith(os.path.abspath(DATA_DIR)):
-        return f"❌ 路径越界拦截:{file_name} 超出 data/ 目录"
-    if not os.path.exists(path):
-        return f"❌ 文件不存在:{file_name}(相对于 data/ 目录)"
+def _resolve_data_file(file_name: str) -> list[str]:
+    """在 data/ 下解析文件路径:先精确匹配,再按文件名模糊匹配(模型常只给文件名)"""
+    exact = os.path.abspath(os.path.join(DATA_DIR, file_name))
+    if os.path.exists(exact) and exact.startswith(os.path.abspath(DATA_DIR)):
+        return [exact]
+    target = file_name.replace("\\", "/").split("/")[-1].lower()
+    matches = []
+    for root, _, files in os.walk(DATA_DIR):
+        for fn in files:
+            if target and target in fn.lower():
+                matches.append(os.path.join(root, fn))
+    return matches
+
+
+def tool_parse_document(file_name: str, keyword: str = "") -> str:
+    """解析 data/ 目录下文档(路径安全:强制限制在 data 内,支持文件名模糊匹配)。
+
+    keyword 可选:只返回包含该关键词的段落,避免整篇文档前2000字截断挡住深处章节。
+    """
+    matches = _resolve_data_file(file_name)
+    if not matches:
+        return f"❌ 未找到文件:{file_name}(按 data/ 下文件名模糊匹配无结果)"
+    if len(matches) > 1:
+        names = "\n".join(os.path.relpath(m, DATA_DIR) for m in matches[:8])
+        return f"❌ 文件有歧义,匹配到多个,请指定其中一个:\n{names}"
+    path = matches[0]
     blocks = parse_document(path)
     if not blocks:
         return "❌ 解析失败或无文字内容(扫描件需 OCR)"
+    if keyword:
+        idxs = [i for i, b in enumerate(blocks) if keyword in b.text]
+        if not idxs:
+            return f"❌ 文件中未找到包含「{keyword}」的段落,请换关键词或去掉 keyword 参数"
+        # 命中段落带前后文(±2段):资格清单常横跨多页,只看命中段会漏掉开头几项
+        ctx = set()
+        for i in idxs:
+            for j in range(max(0, i - 2), min(len(blocks), i + 3)):
+                ctx.add(j)
+        blocks = [blocks[i] for i in sorted(ctx)]
+        # 过滤后通常只剩少量段落,放大上限让深处章节(如资格清单)完整可见
+        cap = 6000
+    else:
+        cap = MAX_OUTPUT_LEN
     text = "\n".join(f"[{b.section}] {b.text}" for b in blocks)
-    return f"【解析成功】{file_name} 共{len(blocks)}段\n{truncate_text(text)}"
+    return f"【解析成功】{os.path.basename(path)} 共{len(blocks)}段(关键词「{keyword}」过滤后)\n{truncate_text(text, cap)}"
 
 
 def tool_retrieve(query: str, top_k: int = 5) -> str:
@@ -156,7 +189,7 @@ def tool_cite_source(chunk_ids: str) -> str:
 # ====================== 4. 注册所有工具 ======================
 tool_registry.register(
     "memory_kv_write", "写入长期KV键值记忆,存储文件名/参数等确定信息",
-    {"type": "object", "properties": {"key": {"type": "string"}, "value": {"type": "string"}, "desc": {"type": "string"}},
+    {"type": "object", "properties": {"key": {"type": "string"}, "value": {"type": "string"}, "desc": {"type": "string"}}},
     tool_memory_kv_write, "memory",
 )
 tool_registry.register(
@@ -175,8 +208,8 @@ tool_registry.register(
     tool_memory_sem_search, "memory",
 )
 tool_registry.register(
-    "parse_document", "解析 data/ 目录下的 PDF/Word/Excel 文档,返回带来源定位的文本(页码/工作表)",
-    {"type": "object", "properties": {"file_name": {"type": "string", "description": "data/ 下的相对路径,如 zhizheng/xx.pdf"}}},
+    "parse_document", "解析 data/ 目录下的 PDF/Word/Excel 文档,返回带来源定位的文本(页码/工作表);可传 keyword 只返回含该关键词的段落",
+    {"type": "object", "properties": {"file_name": {"type": "string", "description": "data/ 下的相对路径,如 zhizheng/xx.pdf"}, "keyword": {"type": "string", "description": "可选,只返回包含该关键词的段落,如'资格'"}}},
     tool_parse_document, "doc",
 )
 tool_registry.register(

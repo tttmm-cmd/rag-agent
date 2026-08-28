@@ -1,0 +1,21 @@
+services:
+  api:
+    build: .
+    # 密钥从宿主机 .env 注入容器环境(llm.py/embedder.py 启动时读),不进镜像
+    env_file: .env
+    volumes:
+      # 会话记忆 / trace 落盘持久化,容器重建不丢
+      - ./agent_memory:/app/agent_memory
+      - ./traces:/app/traces
+    restart: unless-stopped
+    # 不对外暴露端口,只走 nginx
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped

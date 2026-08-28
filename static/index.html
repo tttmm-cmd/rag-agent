@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>政务文档智能问答</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="title">
+        <h1>政务文档智能问答</h1>
+        <p class="sub">政府采购语料 · 答案带引用可追溯 · 支持多轮追问</p>
+      </div>
+      <button id="new-session" class="ghost-btn">新会话</button>
+    </header>
+
+    <main id="chat" class="chat">
+      <div class="hint">
+        <p>试试:</p>
+        <ul>
+          <li>青岛大学附属医院塑料制品采购项目对供应商有什么资格要求?</li>
+          <li>山东电子职业技术学院具身智能机器人项目采购了哪些设备?</li>
+          <li>语料中有没有涉及区块链技术的采购内容?</li>
+        </ul>
+      </div>
+    </main>
+
+    <div class="composer">
+      <textarea id="input" rows="2" placeholder="输入问题,回车发送,Shift+Enter 换行…"></textarea>
+      <button id="send">提问</button>
+    </div>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
